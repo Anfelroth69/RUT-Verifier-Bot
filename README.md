@@ -203,9 +203,8 @@ Ni valores sensibles embebidos directamente en el código fuente.
 * [ ] Añadir pruebas automatizadas.
 * [ ] Implementar logging estructurado.
 * [ ] Mejorar manejo de errores.
-* [ ] Integración con Telegram.
 * [ ] Exponer funcionalidad mediante API REST.
-* [ ] Contenerización con Docker.
+
 
 ---
 
