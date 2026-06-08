@@ -1,0 +1,23 @@
+{
+    "auth": {
+        "modal_notifications": "text='Notificaciones'",
+        "modal_notifications_text": "navegador le preguntara si desea permitir las notificaciones",
+        "modal_notifications_btn": "text='Continuar'",
+        "modal_error_login": "text='intentando ingresar de manera incorrecta'",
+        "modal_error_login_close": "button:has(mat-icon:has-text('close')), mat-icon:has-text('close')",
+        "doc_type_trigger": "mat-select[name='tipoDocumento'] .mat-select-trigger",
+        "doc_type_options": "mat-option",
+        "input_username": "input[name='numDocumento']",
+        "input_password": "input[type='password']",
+        "checkbox_terms": "mat-checkbox:has(input[name='aceptaTratamientoDatos'])",
+        "btn_submit": "button.mat-raised-button:has-text('Ingresar')"
+    },
+    "search": {
+        "input_target_cedula": "input[id='vistaConsultaPersonas:frmConsultaPersonas:txtNumIdentVigente']",
+        "btn_search_jsf": "input[type='image'][src*='botbuscar.gif'], input[name='vistaConsultaPersonas:frmConsultaPersonas:_id46']"
+    },
+    "results": {
+        "span_success": "span[class='textoNegro']",
+        "body": "body"
+    }
+}
