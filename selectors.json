@@ -1,9 +1,9 @@
 {
     "auth": {
-        "modal_notifications": "text='Notificaciones'",
+        "modal_notifications": "text=Notificaciones",
         "modal_notifications_text": "navegador le preguntara si desea permitir las notificaciones",
-        "modal_notifications_btn": "text='Continuar'",
-        "modal_error_login": "text='intentando ingresar de manera incorrecta'",
+        "modal_notifications_btn": "text=Continuar",
+        "modal_error_login": "text=intentando ingresar de manera incorrecta",
         "modal_error_login_close": "button:has(mat-icon:has-text('close')), mat-icon:has-text('close')",
         "doc_type_trigger": "mat-select[name='tipoDocumento'] .mat-select-trigger",
         "doc_type_options": "mat-option",
