@@ -157,7 +157,8 @@ class DianRutVerifier:
                 # ==========================================
                 logger.info(f"[{cedula_consulta}] Fase 4: Esperando y evaluando el contenido de la respuesta...")
                 
-                selector_exito = page.locator(self.SELECTORS["results"]["span_success"]).first
+                label_documento = page.locator('span.textoNegro').filter(has_text=re.compile(r'^Documento:\s*$'))
+                spans_negros = page.locator(self.SELECTORS["results"]["span_success"])
                 patron_no_existe = re.compile(r"no tiene registro de inscripci[oó]n", re.IGNORECASE)
                 selector_error = page.locator(self.SELECTORS["results"]["body"]).filter(has_text=patron_no_existe)
                 
@@ -167,17 +168,22 @@ class DianRutVerifier:
                 evaluacion_completa = False
                 
                 for intento in range(max_intentos):
-                    if await selector_exito.is_visible():
-                        texto_interno = await selector_exito.inner_text()
-                        texto_interno = texto_interno.strip()
+                    if await label_documento.is_visible():
+                        count = await spans_negros.count()
+                        rut_encontrado = None
+                        for i in range(count):
+                            text = (await spans_negros.nth(i).inner_text()).strip()
+                            if re.match(r'^\d+$', text) and text != cedula_consulta:
+                                rut_encontrado = text
+                                break
                         
-                        if re.search(r'\d+', texto_interno):
-                            logger.info(f"[{cedula_consulta}] ✅ ¡Etiqueta válida con campo numérico detectada: '{texto_interno}'!")
+                        if rut_encontrado:
+                            logger.info(f"[{cedula_consulta}] ✅ ¡RUT detectado: {rut_encontrado}!")
                             result["status"] = "success"
                             result["rut_exists"] = True
                             result["data"] = {
                                 "cedula_consultada": cedula_consulta,
-                                "contenido_confirmado": texto_interno
+                                "contenido_confirmado": rut_encontrado
                             }
                             result["message"] = "El RUT existe."
                             evaluacion_completa = True
@@ -193,15 +199,23 @@ class DianRutVerifier:
                     
                     await page.wait_for_timeout(500)
                 
-                if not evaluacion_completa and await selector_exito.is_visible():
-                    texto_final = await selector_exito.inner_text()
-                    texto_final = texto_final.strip()
-                    if not re.search(r'\d+', texto_final):
-                        logger.warning(f"[{cedula_consulta}] ⚠️ La etiqueta se renderizó pero permaneció vacía o sin datos numéricos.")
-                        result["status"] = "success"
-                        result["rut_exists"] = False
-                        result["message"] = f"La cédula {cedula_consulta} NO tiene RUT."
-                        evaluacion_completa = True
+                if not evaluacion_completa:
+                    # Último intento de respaldo por si el renderizado tardó un poco más
+                    if await label_documento.is_visible():
+                        count = await spans_negros.count()
+                        for i in range(count):
+                            text = (await spans_negros.nth(i).inner_text()).strip()
+                            if re.match(r'^\d+$', text) and text != cedula_consulta:
+                                logger.info(f"[{cedula_consulta}] ✅ ¡RUT detectado en último intento: {text}!")
+                                result["status"] = "success"
+                                result["rut_exists"] = True
+                                result["data"] = {
+                                    "cedula_consultada": cedula_consulta,
+                                    "contenido_confirmado": text
+                                }
+                                result["message"] = "El RUT existe."
+                                evaluacion_completa = True
+                                break
 
                 if not evaluacion_completa:
                     raise Exception("Timeout de red: El servidor de la DIAN no arrojó ninguna estructura reconocible.")

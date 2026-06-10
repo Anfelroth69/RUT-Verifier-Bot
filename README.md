@@ -15,11 +15,15 @@ Este repositorio incluye `render.yaml`. Simplemente conecta este repo a Render y
 - `DIAN_PASSWORD`: Tu contraseña DIAN.
 
 ## Desarrollo Local
-1. **Backend**:
-   - `cd backend`
-   - `pip install -r requirements.txt`
-   - `uvicorn app.main:app --reload`
-2. **Frontend**:
-   - `cd frontend`
-   - `pnpm install`
-   - `pnpm run dev`
+
+### Backend
+1. `cd backend`
+2. `python -m venv venv`
+3. `source venv/bin/activate` # O `venv\Scripts\activate` en Windows
+4. `pip install -r requirements.txt`
+5. `uvicorn app.main:app --reload`
+
+### Frontend
+1. `cd frontend`
+2. `pnpm install`
+3. `pnpm run dev`
