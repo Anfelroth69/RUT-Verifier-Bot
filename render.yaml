@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: rut-verifier-api
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: DIAN_DOCUMENT
+        sync: false
+      - key: DIAN_PASSWORD
+        sync: false
+      - key: CEDULA_CONSULTA
+        sync: false
+      - key: FRONTEND_URL
+        value: https://rut-verifier-frontend.onrender.com
+    healthCheckPath: /api/v1/health
+
+  - type: static
+    name: rut-verifier-frontend
+    buildCommand: pnpm install && pnpm run build
+    staticPublishPath: ./frontend/dist
+    rootDir: ./frontend
+    envVars:
+      - key: PUBLIC_API_URL
+        value: https://rut-verifier-api.onrender.com

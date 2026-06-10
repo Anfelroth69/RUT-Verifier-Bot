@@ -1,0 +1,238 @@
+---
+// VerifyForm.astro
+---
+<div class="bg-white p-6 sm:p-8 rounded-xl shadow-md border border-gray-100">
+  <form id="verify-form" class="space-y-4" novalidate>
+    <div>
+      <label for="cedula" class="block text-sm font-medium text-gray-700 mb-1">
+        Número de Cédula
+      </label>
+      <div class="relative">
+        <input
+          type="text"
+          id="cedula"
+          name="cedula"
+          required
+          pattern="^\\d{6,10}$"
+          placeholder="Ej: 16728423"
+          class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-3 border outline-none transition-colors peer
+                 user-invalid:border-red-500 user-invalid:text-red-900 user-invalid:focus:border-red-500 user-invalid:focus:ring-red-500"
+        />
+        <!-- Mensaje de error (usando peer y user-invalid de Tailwind/CSS moderno) -->
+        <p class="mt-2 text-sm text-red-600 hidden peer-user-invalid:block">
+          Por favor, ingrese un número de cédula válido (solo números, entre 6 y 10 dígitos).
+        </p>
+      </div>
+      <p class="mt-2 text-xs text-gray-500 peer-user-invalid:hidden">
+        Ingrese el número sin puntos ni comas.
+      </p>
+    </div>
+
+    <div id="cold-start-alert" class="hidden bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded-md">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-blue-700">
+            El servidor se está despertando tras un periodo de inactividad. Esto puede tomar un minuto...
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div id="error-alert" class="hidden bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-md">
+       <div class="ml-3">
+          <p class="text-sm text-red-700" id="error-alert-text"></p>
+        </div>
+    </div>
+
+    <button
+      type="submit"
+      id="submit-btn"
+      class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+    >
+      <span id="btn-text">Verificar RUT</span>
+      <svg id="btn-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </button>
+  </form>
+</div>
+
+<script>
+  import type { RutResponse, HistoryItem } from '../types';
+
+  const form = document.getElementById('verify-form') as HTMLFormElement;
+  const inputCedula = document.getElementById('cedula') as HTMLInputElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const btnText = document.getElementById('btn-text') as HTMLSpanElement;
+  const btnSpinner = document.getElementById('btn-spinner') as HTMLElement;
+  const coldStartAlert = document.getElementById('cold-start-alert') as HTMLDivElement;
+  const errorAlert = document.getElementById('error-alert') as HTMLDivElement;
+  const errorAlertText = document.getElementById('error-alert-text') as HTMLParagraphElement;
+  const resultContainer = document.getElementById('result-container') as HTMLDivElement;
+  const historyList = document.getElementById('history-list') as HTMLUListElement;
+  const emptyHistory = document.getElementById('empty-history') as HTMLParagraphElement;
+
+  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:8000";
+
+  // Inicializar historial
+  const loadHistory = () => {
+    const historyData = localStorage.getItem('rutHistory');
+    if (!historyData) return [];
+    try {
+      return JSON.parse(historyData) as HistoryItem[];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveHistory = (item: HistoryItem) => {
+    const history = loadHistory();
+    // Prevenir duplicados inmediatos
+    const filteredHistory = history.filter(h => h.cedula !== item.cedula);
+    const newHistory = [item, ...filteredHistory].slice(0, 10);
+    localStorage.setItem('rutHistory', JSON.stringify(newHistory));
+    renderHistory();
+  };
+
+  const renderHistory = () => {
+    const history = loadHistory();
+    if (!historyList) return;
+    
+    historyList.innerHTML = '';
+    
+    if (history.length === 0) {
+      if (emptyHistory) emptyHistory.classList.remove('hidden');
+      return;
+    }
+    
+    if (emptyHistory) emptyHistory.classList.add('hidden');
+    
+    const template = document.getElementById('history-item-template') as HTMLTemplateElement;
+    
+    history.forEach(item => {
+      const clone = template.content.cloneNode(true) as DocumentFragment;
+      
+      const statusIndicator = clone.querySelector('.history-status-indicator') as HTMLDivElement;
+      if (item.rut_exists === true) statusIndicator.classList.add('bg-green-500');
+      else if (item.rut_exists === false) statusIndicator.classList.add('bg-red-500');
+      else statusIndicator.classList.add('bg-yellow-500');
+
+      (clone.querySelector('.history-cedula') as HTMLParagraphElement).textContent = item.cedula;
+      (clone.querySelector('.history-date') as HTMLParagraphElement).textContent = new Date(item.timestamp).toLocaleString('es-CO');
+      (clone.querySelector('.history-message') as HTMLDivElement).textContent = item.message || "Error";
+      
+      historyList.appendChild(clone);
+    });
+  };
+
+  // Render Result Card
+  const renderResult = (res: RutResponse, cedula: string) => {
+    resultContainer.innerHTML = '';
+    resultContainer.classList.remove('hidden');
+    
+    const template = document.getElementById('result-card-template') as HTMLTemplateElement;
+    const clone = template.content.cloneNode(true) as DocumentFragment;
+    
+    (clone.querySelector('.result-cedula') as HTMLSpanElement).textContent = cedula;
+    (clone.querySelector('.result-message') as HTMLParagraphElement).textContent = res.message;
+    (clone.querySelector('.result-duration') as HTMLSpanElement).textContent = res.duration_ms.toString();
+    
+    const badge = clone.querySelector('.result-badge') as HTMLDivElement;
+    
+    if (res.status === 'success' && res.rut_exists === true) {
+      badge.textContent = "RUT Activo";
+      badge.classList.add('bg-green-100', 'text-green-800');
+      
+      if (res.data) {
+        const dataContainer = clone.querySelector('.result-data-container') as HTMLDivElement;
+        dataContainer.classList.remove('hidden');
+        (clone.querySelector('.result-content') as HTMLParagraphElement).textContent = res.data.contenido_confirmado;
+      }
+    } else if (res.status === 'success' && res.rut_exists === false) {
+      badge.textContent = "Sin RUT";
+      badge.classList.add('bg-red-100', 'text-red-800');
+    } else {
+      badge.textContent = "Error";
+      badge.classList.add('bg-yellow-100', 'text-yellow-800');
+    }
+
+    resultContainer.appendChild(clone);
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (!form.checkValidity()) {
+        // Forza que se muestren los estilos user-invalid disparando interactividad si no la hubo
+        return;
+    }
+    
+    const cedula = inputCedula.value.trim();
+    
+    // UI State Loading
+    submitBtn.disabled = true;
+    btnText.textContent = "Verificando...";
+    btnSpinner.classList.remove('hidden');
+    coldStartAlert.classList.add('hidden');
+    errorAlert.classList.add('hidden');
+    resultContainer.classList.add('hidden');
+    
+    // Cold start timeout logic
+    const coldStartTimer = setTimeout(() => {
+      coldStartAlert.classList.remove('hidden');
+    }, 5000);
+
+    try {
+      // 90 seconds timeout for Render cold starts
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 90000);
+
+      const response = await fetch(`${API_URL}/api/v1/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cedula }),
+        signal: controller.signal
+      });
+
+      clearTimeout(fetchTimeout);
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Error HTTP: ${response.status}`);
+      }
+
+      const data = await response.json() as RutResponse;
+      renderResult(data, cedula);
+      
+      saveHistory({
+        cedula,
+        timestamp: new Date().toISOString(),
+        rut_exists: data.rut_exists,
+        message: data.message,
+        data: data.data
+      });
+
+    } catch (error: any) {
+      errorAlertText.textContent = error.name === 'AbortError' 
+        ? "La petición ha excedido el tiempo de espera (90s). El servidor podría estar apagado."
+        : `Error: ${error.message}`;
+      errorAlert.classList.remove('hidden');
+    } finally {
+      clearTimeout(coldStartTimer);
+      coldStartAlert.classList.add('hidden');
+      
+      submitBtn.disabled = false;
+      btnText.textContent = "Verificar RUT";
+      btnSpinner.classList.add('hidden');
+    }
+  });
+
+  // Init
+  document.addEventListener('DOMContentLoaded', renderHistory);
+</script>
