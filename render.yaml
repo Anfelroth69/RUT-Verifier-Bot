@@ -13,10 +13,9 @@ services:
         value: "true"
       - key: FRONTEND_URL
         value: https://rut-verifier-frontend.onrender.com
-    healthCheckPath: /api/v1/health
-    # Optimization for Render Free Tier:
-    # Adding grace period to allow Chromium and the bot to initialize properly.
-    healthCheckWaitAfterBuild: 60
+    healthCheck:
+      path: /api/v1/health
+      initialDelaySeconds: 60
 
   - type: web
     name: rut-verifier-frontend
