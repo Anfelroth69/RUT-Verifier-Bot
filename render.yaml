@@ -13,9 +13,7 @@ services:
         value: "true"
       - key: FRONTEND_URL
         value: https://rut-verifier-frontend.onrender.com
-    healthCheck:
-      path: /api/v1/health
-      initialDelaySeconds: 60
+    healthCheckPath: /api/v1/health
 
   - type: web
     name: rut-verifier-frontend
