@@ -9,8 +9,8 @@ services:
         sync: false
       - key: DIAN_PASSWORD
         sync: false
-      - key: CEDULA_CONSULTA
-        sync: false
+      - key: PLAYWRIGHT_HEADLESS
+        value: "true"
       - key: FRONTEND_URL
         value: https://rut-verifier-frontend.onrender.com
     healthCheckPath: /api/v1/health
