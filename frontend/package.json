@@ -17,7 +17,7 @@
     "tailwindcss": "^4.3.0"
   },
   "pnpm": {
-    "approvedBuilds": [
+    "onlyBuiltDependencies": [
       "esbuild",
       "sharp"
     ]
