@@ -20,7 +20,7 @@ services:
     name: rut-verifier-frontend
     runtime: static
     buildCommand: npm install -g pnpm@latest && pnpm install && pnpm run build
-    staticPublishPath: ./frontend/dist
+    staticPublishPath: ./dist
     rootDir: ./frontend
     envVars:
       - key: NODE_VERSION
