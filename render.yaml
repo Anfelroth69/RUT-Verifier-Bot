@@ -18,8 +18,9 @@ services:
     # Adding grace period to allow Chromium and the bot to initialize properly.
     healthCheckWaitAfterBuild: 60
 
-  - type: static
+  - type: web
     name: rut-verifier-frontend
+    runtime: static
     buildCommand: pnpm install && pnpm run build
     staticPublishPath: ./frontend/dist
     rootDir: ./frontend
