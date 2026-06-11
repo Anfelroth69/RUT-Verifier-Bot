@@ -19,9 +19,11 @@ services:
   - type: web
     name: rut-verifier-frontend
     runtime: static
-    buildCommand: pnpm install && pnpm run build
+    buildCommand: npm install -g pnpm@latest && pnpm install && pnpm run build
     staticPublishPath: ./frontend/dist
     rootDir: ./frontend
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: PUBLIC_API_URL
         value: https://rut-verifier-api.onrender.com
