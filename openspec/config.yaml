@@ -1,0 +1,36 @@
+schema: spec-driven
+
+context: |
+  ## Stack de Tecnologías (100% TypeScript)
+  - Frontend: Astro.js 6.x + TypeScript + Tailwind CSS v4
+  - Frontend Data Fetching: TanStack React Query v5
+  - Backend: Hono (TypeScript) + Playwright Node.js
+  - Testing: Vitest + @testing-library/react + MSW
+  - Deployment: Render.com Free Tier (Docker, 512MB RAM)
+  - AI Assistant: MiMo Code (TUI)
+
+  ## Portal DIAN (CRÍTICO)
+  - URL Login: https://muisca.dian.gov.co/WebIdentidadLogin
+  - URL Búsqueda: https://muisca.dian.gov.co/WebArquitectura/DefConsultaPersonas.faces
+  - Tecnologías: Angular Material + JSF
+  - Selectores: backend/src/services/selectors.json
+  - Locale: es-CO
+
+  ## Restricciones
+  - NO usar waitForTimeout()
+  - Semaphore(1) obligatorio
+  - Playwright args optimizados para 512MB RAM
+
+rules:
+  proposal:
+    - Identificar selectores DIAN afectados
+    - Considerar escenarios positivos y negativos
+  specs:
+    - Usar formato Given/When/Then
+    - Incluir escenarios de éxito y fallo
+  design:
+    - NUNCA usar waitForTimeout
+    - Documentar patrones de Playwright
+  tasks:
+    - Incluir testing unitario
+    - Verificar contrato JSON

@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "type": "module",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -9,12 +9,31 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@astrojs/react": "^4.0.0",
     "@tailwindcss/vite": "^4.3.0",
+    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-table": "^8.0.0",
     "astro": "^6.4.5",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
     "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^25.0.1",
+    "msw": "^2.15.0",
+    "vitest": "^4.1.10"
   },
   "pnpm": {
     "approvedBuilds": [

@@ -1,28 +1,32 @@
-# Base image with system dependencies for Playwright
-FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
+# Use official Playwright image for Node.js
+FROM mcr.microsoft.com/playwright:v1.61.0-noble
 
 # Set working directory
 WORKDIR /app
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PLAYWRIGHT_HEADLESS=True
+ENV NODE_ENV=production \
+    PLAYWRIGHT_HEADLESS=true
 
-# Copy requirements file
-COPY requirements.txt .
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install pnpm and dependencies
+RUN corepack enable && pnpm install --frozen-lockfile --prod
 
-# Install Playwright browsers (chromium) and system dependencies
-RUN playwright install chromium --with-deps
+# Copy application code
+COPY ./src ./src
+COPY tsconfig.json ./
 
-# Copy the application code
-COPY ./app ./app
+# Build TypeScript
+RUN pnpm build
 
 # Expose port
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8000/api/v1/health || exit 1
+
+# Start application
+CMD ["node", "dist/index.js"]
