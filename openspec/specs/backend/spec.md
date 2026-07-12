@@ -1,5 +1,15 @@
 # Backend Spec — Hono API + Playwright
 
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Hono + @hono/node-server |
+| Language | TypeScript (compiled to Node.js) |
+| Automation | Playwright for Node.js (Chromium) |
+| Validation | Zod schemas |
+| Deployment | Render.com (Docker, 512MB RAM) |
+
 ## Endpoints
 
 ### POST /api/v1/verify
@@ -9,15 +19,16 @@
 **Request**:
 ```json
 {
-  "cedula_consulta": "16728423"
+  "cedula": "16728423"
 }
 ```
 
 **Validation**:
-- `cedula_consulta`: string, numeric only, 6–10 digits
-- HTTP 422 on invalid input
+- `cedula`: string, numeric only, 6–10 digits
+- Regex: `/^\d{6,10}$/`
+- HTTP 422 on invalid input with Zod issue details
 
-**Success Response (200)**:
+**Success Response (200) — RUT exists**:
 ```json
 {
   "status": "success",
@@ -31,7 +42,7 @@
 }
 ```
 
-**Negative Response (200)**:
+**Success Response (200) — No RUT**:
 ```json
 {
   "status": "success",
@@ -45,11 +56,14 @@
 **Error Response (503)**:
 ```json
 {
-  "status": "failed",
-  "rut_exists": null,
-  "data": null,
-  "message": "Error al procesar la solicitud.",
-  "duration_ms": 12045
+  "message": "Error al procesar la solicitud."
+}
+```
+
+**Error Response (500)**:
+```json
+{
+  "message": "Error interno del servidor"
 }
 ```
 
@@ -60,8 +74,8 @@
 **Response (200)**:
 ```json
 {
-  "status": "ok",
-  "timestamp": "2026-07-09T21:00:00Z"
+  "status": "healthy",
+  "timestamp": "2026-07-09T21:00:00.000Z"
 }
 ```
 
@@ -73,32 +87,35 @@
 
 ```
 Given a valid cédula "16728423" that has an active RUT
-When the client sends POST /api/v1/verify with cedula_consulta "16728423"
-Then the backend launches Playwright with Semaphore(1)
-And navigates to DIAN MUISCA login
-And authenticates with DIAN_DOCUMENT and DIAN_PASSWORD
-And searches for the cédula
-And the portal displays a result page
+When the client sends POST /api/v1/verify with cedula "16728423"
+Then the backend acquires Semaphore(1)
+  And launches Playwright with optimized args
+  And navigates to DIAN MUISCA login
+  And authenticates with DIAN_DOCUMENT and DIAN_PASSWORD
+  And navigates to the search page
+  And enters the target cédula and submits the JSF search
+  And the portal displays a result page with span.textoNegro
 Then the response contains status "success" and rut_exists true
-And duration_ms is a positive integer
+  And duration_ms is a positive integer
 ```
 
 ### Scenario: Cédula without RUT
 
 ```
 Given a valid cédula "99999999" that has no active RUT
-When the client sends POST /api/v1/verify with cedula_consulta "99999999"
+When the client sends POST /api/v1/verify with cedula "99999999"
 Then the backend performs the search
-And the portal displays "no registration" pattern
+  And the portal displays "no registration" pattern
 Then the response contains status "success" and rut_exists false
+  And data is null
 ```
 
 ### Scenario: Invalid input format
 
 ```
 Given a cédula "abc123" with non-numeric characters
-When the client sends POST /api/v1/verify with cedula_consulta "abc123"
-Then the response is HTTP 422 with validation error
+When the client sends POST /api/v1/verify with cedula "abc123"
+Then the response is HTTP 422 with validation error details
 ```
 
 ### Scenario: DIAN portal unavailable
@@ -107,7 +124,7 @@ Then the response is HTTP 422 with validation error
 Given the DIAN MUISCA portal is unreachable
 When the client sends a valid verify request
 Then the backend catches the navigation error
-Then the response is HTTP 503 with status "failed"
+  And returns HTTP 503 with error message
 ```
 
 ### Scenario: Concurrent requests
@@ -116,7 +133,17 @@ Then the response is HTTP 503 with status "failed"
 Given two requests arrive simultaneously
 When the first request acquires Semaphore(1)
 Then the second request waits in queue
-And both requests eventually complete with valid responses
+  And both requests eventually complete with valid responses
+  And only one Playwright instance runs at a time
+```
+
+### Scenario: Browser crash or OOM
+
+```
+Given the browser process crashes during execution
+When the error is caught
+Then the semaphore is released in the finally block
+  And the response is HTTP 503
 ```
 
 ---
@@ -138,6 +165,33 @@ And both requests eventually complete with valid responses
 | HTTP | Meaning | Trigger |
 |------|---------|---------|
 | 200 | Success | Valid request, result found or not found |
-| 422 | Validation Error | Invalid cédula format |
-| 503 | Service Unavailable | Playwright/DIAN failure |
+| 422 | Validation Error | Invalid cédula format (Zod validation) |
+| 503 | Service Unavailable | Playwright/DIAN failure (timeout, login failure, etc.) |
 | 500 | Internal Error | Unexpected server error |
+
+---
+
+## Selectors
+
+Selectors for the DIAN MUISCA portal are **hardcoded** in `backend/src/services/dian-verifier.ts` as a `const SELECTORS` object (not in an external JSON file). They are organized by phase:
+
+- `auth`: Login form elements (Angular Material selectors, modal dialogs)
+- `search`: JSF search input and button
+- `results`: Result text (`span.textoNegro`) and body
+
+---
+
+## Concurrency
+
+A custom `Semaphore` class (`backend/src/core/semaphore.ts`) limits Playwright to **1 concurrent instance**:
+
+```typescript
+class Semaphore {
+  private permits: number
+  private queue: (() => void)[] = []
+  // acquire/release implementation
+}
+export const semaphore = new Semaphore(1)
+```
+
+No external library. No database. No cache layer.

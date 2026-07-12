@@ -440,3 +440,32 @@ A change is complete when:
 * No secrets are exposed.
 * Documentation is updated when required.
 * Another developer can understand the change without additional context.
+
+---
+
+## OpenSpec Spec-Driven Workflow
+
+### Build Mode Orchestration
+
+After planning together, the user confirms with "listo para build" or equivalent. The following agent chain executes:
+
+```
+[Orquestador] → Agent 1 (Propuesta) → Agent 2 (Specs)
+                                     → Agent 3 (Implementación)
+                                     → Agent 4 (Verificación)
+                                     → Resumen final
+```
+
+Agent definitions and prompts in `openspec/agents/`:
+- `01-proposal-agent.md` — Analiza problema, genera plan con MCP graph
+- `02-specs-agent.md` — Valida plan contra OpenSpecs y reglas
+- `03-implement-agent.md` — Ejecuta cambios de código
+- `04-verify-agent.md` — Corre tests, valida contrato JSON, verifica regresión
+
+### Orquestation rules
+
+1. Cada agente usa **codebase-memory-mcp** como fuente primaria de contexto
+2. Los agentes se ejecutan secuencialmente, pasando contexto al siguiente
+3. Si Agent 2 rechaza el plan, se vuelve a Agent 1 con las observaciones
+4. Si Agent 4 encuentra fallos, los reporta para corrección manual
+5. Siempre pedir confirmación al usuario antes de comenzar la cadena mostrando un resumen del plan
