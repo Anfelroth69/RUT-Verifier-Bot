@@ -11,8 +11,8 @@ ENV NODE_ENV=production \
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install pnpm and dependencies
-RUN corepack enable && pnpm install --frozen-lockfile --prod
+# Install pnpm and all dependencies (including devDeps for build)
+RUN corepack enable && pnpm install --frozen-lockfile
 
 # Copy application code
 COPY ./src ./src
@@ -20,6 +20,9 @@ COPY tsconfig.json ./
 
 # Build TypeScript
 RUN pnpm build
+
+# Remove dev dependencies for smaller image
+RUN pnpm prune --prod
 
 # Expose port
 EXPOSE 8000
