@@ -78,7 +78,7 @@
   const historyList = document.getElementById('history-list') as HTMLUListElement;
   const emptyHistory = document.getElementById('empty-history') as HTMLParagraphElement;
 
-  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:8000";
+  const API_URL = import.meta.env.PUBLIC_API_URL || "";
 
   // Inicializar historial
   const loadHistory = () => {
@@ -219,9 +219,13 @@
       });
 
     } catch (error: any) {
-      errorAlertText.textContent = error.name === 'AbortError' 
-        ? "La petición ha excedido el tiempo de espera (90s). El servidor podría estar apagado."
-        : `Error: ${error.message}`;
+      if (error.name === 'AbortError') {
+        errorAlertText.textContent = "La petición ha excedido el tiempo de espera (90s). El servidor podría estar apagado."
+      } else if (error.message === 'Failed to fetch') {
+        errorAlertText.textContent = "No se pudo conectar con el servidor. Verifica que el backend esté corriendo en localhost:8000."
+      } else {
+        errorAlertText.textContent = `Error: ${error.message}`
+      }
       errorAlert.classList.remove('hidden');
     } finally {
       clearTimeout(coldStartTimer);
