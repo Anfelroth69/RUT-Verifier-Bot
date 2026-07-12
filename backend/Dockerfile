@@ -9,7 +9,7 @@ ENV NODE_ENV=production \
     PLAYWRIGHT_HEADLESS=true
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install pnpm and all dependencies (including devDeps for build)
 RUN corepack enable && pnpm install --frozen-lockfile
