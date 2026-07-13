@@ -1,0 +1,355 @@
+---
+// BatchWizard.astro — V3 Stepped Wizard
+// Steps: ① Upload file → ② Validate & confirm → ③ Verify
+---
+<div id="batch-wizard" class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+  <div class="p-6 sm:p-8">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-semibold text-gray-900">Verificación por Lote</h3>
+      <span class="text-xs text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full font-medium">3 pasos</span>
+    </div>
+
+    <div class="flex items-start gap-2 mb-6">
+      <div id="bw-step-1" class="flex items-center gap-1.5 text-sm font-medium text-violet-600" data-step="current">
+        <span class="w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold">1</span>
+        <span>Subir</span>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 mt-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+      <div id="bw-step-2" class="flex items-center gap-1.5 text-sm font-medium text-gray-300" data-step="pending">
+        <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-bold">2</span>
+        <span>Validar</span>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 mt-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+      <div id="bw-step-3" class="flex items-center gap-1.5 text-sm font-medium text-gray-300" data-step="pending">
+        <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-bold">3</span>
+        <span>Verificar</span>
+      </div>
+    </div>
+
+    <div id="bw-step-content" class="relative">
+      <div id="bw-step1-content">
+        <div
+          id="bw-dropzone"
+          class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 border-gray-300 hover:border-violet-400 hover:bg-violet-50/30 data-[dragging]:border-violet-500 data-[dragging]:bg-violet-50"
+        >
+          <svg class="mx-auto h-10 w-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="text-base font-medium text-gray-700 mb-1">Arrastra un archivo CSV o XLSX</p>
+          <p class="text-sm text-gray-400 mb-4">o haz clic para seleccionar</p>
+          <span class="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-full">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Máx 5MB · 200 cédulas
+          </span>
+          <input type="file" id="bw-file-input" accept=".csv,.xlsx,.xls" class="hidden" />
+        </div>
+        <div id="bw-step1-error" class="hidden mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700"></div>
+      </div>
+
+      <div id="bw-step2-content" class="hidden">
+        <div id="bw-file-card" class="bg-violet-50 rounded-xl p-4 flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <p id="bw-file-name" class="text-sm font-medium text-gray-900 truncate"></p>
+            <p id="bw-file-meta" class="text-xs text-violet-600"></p>
+          </div>
+          <button id="bw-file-change" class="ml-auto text-xs text-violet-600 hover:text-violet-800 underline">Cambiar</button>
+        </div>
+
+        <p class="text-sm font-medium text-gray-700 mb-2">Cédulas detectadas</p>
+        <div class="max-h-[200px] overflow-y-auto rounded-lg border border-gray-200">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="text-left py-2 px-3 font-medium text-gray-400 text-xs uppercase tracking-wider">#</th>
+                <th class="text-left py-2 px-3 font-medium text-gray-400 text-xs uppercase tracking-wider">Fila</th>
+                <th class="text-left py-2 px-3 font-medium text-gray-400 text-xs uppercase tracking-wider">Cédula</th>
+              </tr>
+            </thead>
+            <tbody id="bw-preview-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <p id="bw-preview-count" class="text-xs text-gray-500 mt-2"></p>
+
+        <div class="mt-5 flex gap-3">
+          <button id="bw-back-to-step1" class="py-2.5 px-4 rounded-xl text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+            Volver
+          </button>
+          <button id="bw-start-verify" class="flex-1 py-2.5 px-4 rounded-xl text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 transition-colors shadow-sm">
+            Verificar cédulas
+          </button>
+        </div>
+      </div>
+
+      <div id="bw-step3-content" class="hidden">
+        <div id="bw-progress" class="mb-6">
+          <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+            <span id="bw-progress-label">Verificando...</span>
+            <span id="bw-progress-count" class="font-semibold text-violet-600"></span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div id="bw-progress-bar" class="bg-violet-600 h-2 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="max-h-[300px] overflow-y-auto rounded-lg border border-gray-200">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="text-left py-2 px-3 font-medium text-gray-400 text-xs uppercase tracking-wider">Cédula</th>
+                <th class="text-left py-2 px-3 font-medium text-gray-400 text-xs uppercase tracking-wider">Estado</th>
+                <th class="text-left py-2 px-3 font-medium text-gray-400 text-xs uppercase tracking-wider">Msj</th>
+              </tr>
+            </thead>
+            <tbody id="bw-results-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+
+        <button id="bw-reset-btn" class="hidden mt-4 w-full py-2.5 px-4 rounded-xl text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+          Cargar otro archivo
+        </button>
+      </div>
+    </div>
+
+    <div id="bw-done" class="hidden mt-4 p-4 bg-gradient-to-r from-violet-50 to-white rounded-xl flex items-center justify-between">
+      <div>
+        <p id="bw-done-title" class="text-sm font-semibold text-gray-900"></p>
+        <p id="bw-done-text" class="text-xs text-gray-500 mt-0.5"></p>
+      </div>
+      <button id="bw-download-btn" class="flex items-center gap-2 text-sm font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 px-4 py-2 rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import {
+    parseFile,
+    VerificationQueue,
+    downloadCSV,
+  } from "../lib/batchVerifier";
+  import type { CedulaRecord, BatchResult, BatchSummary } from "../lib/batchVerifier";
+
+  const API_URL = import.meta.env.PUBLIC_API_URL || "";
+
+  // Elementos steps
+  const step1El = document.getElementById("bw-step-1")!;
+  const step2El = document.getElementById("bw-step-2")!;
+  const step3El = document.getElementById("bw-step-3")!;
+  const stepContent1 = document.getElementById("bw-step1-content")!;
+  const stepContent2 = document.getElementById("bw-step2-content")!;
+  const stepContent3 = document.getElementById("bw-step3-content")!;
+  const doneDiv = document.getElementById("bw-done")!;
+  const doneTitle = document.getElementById("bw-done-title")!;
+  const doneText = document.getElementById("bw-done-text")!;
+  const downloadBtn = document.getElementById("bw-download-btn") as HTMLButtonElement;
+
+  // Elementos step 1
+  const dropzone = document.getElementById("bw-dropzone")!;
+  const fileInput = document.getElementById("bw-file-input") as HTMLInputElement;
+  const step1Error = document.getElementById("bw-step1-error")!;
+
+  // Elementos step 2
+  const fileCardName = document.getElementById("bw-file-name")!;
+  const fileCardMeta = document.getElementById("bw-file-meta")!;
+  const fileChangeBtn = document.getElementById("bw-file-change")!;
+  const previewBody = document.getElementById("bw-preview-body")!;
+  const previewCount = document.getElementById("bw-preview-count")!;
+  const backToStep1 = document.getElementById("bw-back-to-step1")!;
+  const startVerify = document.getElementById("bw-start-verify") as HTMLButtonElement;
+
+  // Elementos step 3
+  const progressLabel = document.getElementById("bw-progress-label")!;
+  const progressCount = document.getElementById("bw-progress-count")!;
+  const progressBar = document.getElementById("bw-progress-bar")!;
+  const resultsBody = document.getElementById("bw-results-body")!;
+  const resetBtn = document.getElementById("bw-reset-btn")!;
+
+  let currentCedulas: CedulaRecord[] = [];
+  let currentResults: BatchResult[] = [];
+  const queue = new VerificationQueue();
+
+  function updateStepIndicators(current: number): void {
+    [step1El, step2El, step3El].forEach((el, i) => {
+      const num = i + 1;
+      if (num < current) {
+        el.setAttribute("data-step", "done");
+        el.className = "flex items-center gap-1.5 text-sm font-medium text-green-600";
+        el.querySelector("span:first-child")!.className = "w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold";
+      } else if (num === current) {
+        el.setAttribute("data-step", "current");
+        el.className = "flex items-center gap-1.5 text-sm font-medium text-violet-600";
+        el.querySelector("span:first-child")!.className = "w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold";
+      } else {
+        el.setAttribute("data-step", "pending");
+        el.className = "flex items-center gap-1.5 text-sm font-medium text-gray-300";
+        el.querySelector("span:first-child")!.className = "w-7 h-7 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-bold";
+      }
+    });
+  }
+
+  function showStep(step: number): void {
+    stepContent1.classList.toggle("hidden", step !== 1);
+    stepContent2.classList.toggle("hidden", step !== 2);
+    stepContent3.classList.toggle("hidden", step !== 3);
+    updateStepIndicators(step);
+  }
+
+  function resetUI(): void {
+    showStep(1);
+    doneDiv.classList.add("hidden");
+    resetBtn.classList.add("hidden");
+    previewBody.innerHTML = "";
+    resultsBody.innerHTML = "";
+    step1Error.classList.add("hidden");
+    currentCedulas = [];
+    currentResults = [];
+    queue.abort();
+  }
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.setAttribute("data-dragging", "true");
+  });
+  dropzone.addEventListener("dragleave", () => dropzone.removeAttribute("data-dragging"));
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.removeAttribute("data-dragging");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFile(file);
+  });
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    if (file) handleFile(file);
+  });
+
+  fileChangeBtn.addEventListener("click", () => {
+    resetUI();
+  });
+  backToStep1.addEventListener("click", () => {
+    resetUI();
+  });
+  resetBtn.addEventListener("click", () => {
+    resetUI();
+  });
+
+  async function handleFile(file: File): Promise<void> {
+    step1Error.classList.add("hidden");
+    try {
+      const cedulas = await parseFile(file);
+      currentCedulas = cedulas;
+      fileCardName.textContent = file.name;
+      fileCardMeta.textContent = `${cedulas.length} cédula${cedulas.length !== 1 ? "s" : ""} · ${(file.size / 1024).toFixed(1)} KB`;
+      renderPreview(cedulas);
+      showStep(2);
+    } catch (err) {
+      step1Error.textContent = err instanceof Error ? err.message : "Error al procesar el archivo.";
+      step1Error.classList.remove("hidden");
+    }
+  }
+
+  function renderPreview(cedulas: CedulaRecord[]): void {
+    previewBody.innerHTML = "";
+    cedulas.forEach((c, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="py-2 px-3 text-gray-400 text-xs w-8">${i + 1}</td>
+        <td class="py-2 px-3 text-gray-400 text-xs font-mono">${c.row}</td>
+        <td class="py-2 px-3 font-mono text-gray-900 text-sm">${c.cedula}</td>
+      `;
+      previewBody.appendChild(tr);
+    });
+    previewCount.textContent = `${cedulas.length} cédula${cedulas.length !== 1 ? "s" : ""} encontrada${cedulas.length !== 1 ? "s" : ""}`;
+    startVerify.textContent = `Verificar ${cedulas.length} cédula${cedulas.length !== 1 ? "s" : ""}`;
+  }
+
+  startVerify.addEventListener("click", async () => {
+    if (currentCedulas.length === 0) return;
+
+    startVerify.disabled = true;
+    startVerify.textContent = "Verificando...";
+    showStep(3);
+    resultsBody.innerHTML = "";
+    doneDiv.classList.add("hidden");
+    resetBtn.classList.add("hidden");
+    currentResults = [];
+
+    await queue.process(
+      currentCedulas,
+      API_URL,
+      (current, total, result) => {
+        progressLabel.textContent = `Verificando ${current} de ${total}...`;
+        progressCount.textContent = `${current} / ${total}`;
+        progressBar.style.width = `${(current / total) * 100}%`;
+        currentResults.push(result);
+        appendResultRow(result);
+      },
+      (summary) => {
+        progressLabel.textContent = "Verificación completada";
+        progressCount.textContent = "✓";
+        progressCount.className = "font-semibold text-green-600";
+
+        startVerify.disabled = false;
+        startVerify.classList.add("hidden");
+        resetBtn.classList.remove("hidden");
+
+        const text = `${summary.with_rut} con RUT · ${summary.without_rut} sin RUT · ${summary.errors} errores`;
+        doneDiv.classList.remove("hidden");
+        doneTitle.textContent = text;
+        doneText.textContent = `${((summary.duration_ms) / 1000).toFixed(1)}s · ${summary.total} consultas`;
+        downloadBtn.onclick = () => downloadCSV(summary.results);
+      },
+      (error) => {
+        startVerify.disabled = false;
+        startVerify.textContent = "Intentar de nuevo";
+        step1Error.textContent = error.message;
+        step1Error.classList.remove("hidden");
+      }
+    );
+  });
+
+  function appendResultRow(result: BatchResult): void {
+    const tr = document.createElement("tr");
+    const tdCedula = document.createElement("td");
+    tdCedula.className = "py-2 px-3 font-mono text-gray-900 text-xs";
+    tdCedula.textContent = result.cedula;
+
+    const tdStatus = document.createElement("td");
+    tdStatus.className = "py-2 px-3";
+    const badge = document.createElement("span");
+    badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium";
+    if (result.rut_exists === true) {
+      badge.classList.add("bg-green-100", "text-green-800");
+      badge.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>Activo`;
+    } else if (result.rut_exists === false) {
+      badge.classList.add("bg-red-100", "text-red-800");
+      badge.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>Sin`;
+    } else {
+      badge.classList.add("bg-amber-100", "text-amber-800");
+      badge.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>Error`;
+    }
+    tdStatus.appendChild(badge);
+
+    const tdMsg = document.createElement("td");
+    tdMsg.className = "py-2 px-3 text-gray-500 text-xs max-w-[180px] truncate";
+    tdMsg.textContent = result.message;
+
+    tr.append(tdCedula, tdStatus, tdMsg);
+    resultsBody.appendChild(tr);
+  }
+</script>

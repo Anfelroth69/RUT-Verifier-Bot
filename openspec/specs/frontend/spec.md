@@ -2,19 +2,18 @@
 
 ## Overview
 
-Single-page application for RUT verification. Astro.js for static shell, React components for interactive UI, TanStack React Query for data fetching. Built with Tailwind CSS v4. No external component libraries.
+Single-page application for RUT verification. Astro.js for static shell + vanilla JS for interactivity. No React. No TanStack. Built with Tailwind CSS v4. No external component libraries.
 
 ## Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Framework | Astro.js 6.x + TypeScript |
-| Interactive UI | React 19 (client islands) |
-| Data Fetching | TanStack React Query v5 |
+| Interactive UI | Vanilla JS (fetch + AbortController + DOM templates) |
+| Data Fetching | Native fetch API |
 | Styling | Tailwind CSS v4 |
-| Table | @tanstack/react-table (history) |
 | XLSX Parsing | xlsx (SheetJS) |
-| Testing | Vitest + @testing-library/react + MSW |
+| Build Tool | pnpm |
 | Deployment | Render.com (static site) |
 
 ## Components
@@ -61,21 +60,9 @@ Single-page application for RUT verification. Astro.js for static shell, React c
 - `data.contenido_confirmado` → confirmed content (if exists)
 - `duration_ms` → response time
 
-### PageContent (React)
+### BatchUpload (Astro + vanilla JS)
 
-**File**: `frontend/src/components/PageContent.tsx`
-
-**Purpose**: React island that wraps interactive components.
-
-```tsx
-<QueryProvider>
-  <BatchUpload />
-</QueryProvider>
-```
-
-### BatchUpload (React)
-
-**File**: `frontend/src/components/BatchUpload.tsx`
+**File**: `frontend/src/components/BatchUpload.astro`
 
 **Purpose**: File upload component for batch verification via CSV or XLSX.
 
@@ -85,26 +72,43 @@ Single-page application for RUT verification. Astro.js for static shell, React c
 - Drag & drop file selection
 - CSV and XLSX parsing (via SheetJS)
 - NIT extraction (6-10 digit numbers)
-- Max 50 records per batch
+- Max 200 records per batch
 - Max file size 5MB
 - Progress bar during processing
 - Auto-download results as CSV
 - 2s delay between individual verifications
 - 90s timeout per individual request
 
-### VerificationTable (React)
+### Batch Verifier (shared lib)
 
-**File**: `frontend/src/components/VerificationTable.tsx`
+**File**: `frontend/src/lib/batchVerifier.ts`
 
-**Purpose**: Display verification history using @tanstack/react-table.
+**Purpose**: Shared logic for batch file upload and verification, used by all BatchUpload component variants.
 
-**Columns**: Cédula, Estado RUT (badge), Fecha, Resultado
+**Functions**:
+- `parseFile(file: File): CedulaRecord[]` — parse CSV/XLSX and extract valid NITs
+- `processBatch(cedulas: CedulaRecord[], onProgress, onComplete, onError)` — sequential verification with rate-limit
+- `downloadCSV(results: BatchResult[])` — generate and trigger CSV download
 
-**Empty state**: "Aún no hay consultas en el historial."
+**Types**:
+```typescript
+interface CedulaRecord {
+  cedula: string;
+  row: number;
+}
 
-### History (localStorage + React Query)
+interface BatchResult {
+  cedula: string;
+  row: number;
+  rut_exists: boolean | null;
+  message: string;
+  duration_ms: number;
+}
+```
 
-**File**: `frontend/src/hooks/useVerificationHistory.ts`
+### History (localStorage + vanilla JS)
+
+**File**: `frontend/src/components/ResultCard.astro` (inline script)
 
 **Type**:
 ```typescript
@@ -122,30 +126,32 @@ interface HistoryItem {
 **Constraints**:
 - Max 10 entries
 - Deduplicated by cédula (keeps most recent)
-- TanStack Query cache with staleTime: Infinity
 - Clear button to wipe all history
+- Managed via vanilla JS in VerifyForm.astro script
 
 ---
 
 ## Data Fetching
 
-### useVerifyRut (vanilla form)
+### VerifyForm (inlined in .astro)
 
-**File**: `frontend/src/hooks/useVerifyRut.ts`
+**File**: `frontend/src/components/VerifyForm.astro`
 
-- `useMutation` from TanStack Query v5
-- `mutationFn`: `POST /api/v1/verify`
-- `onSuccess`: invalidates `['verification-history']` query
+- Native `fetch` with `AbortController`
+- `POST /api/v1/verify` with `{ cedula }`
+- DMI `Content-Type: application/json`
+- AbortController 90s timeout
+- Cold-start detection: if response takes > 5s, show alert
+- On success: renders ResultCard via template + saves to localStorage
+- On error: shows error alert
 
-**Note**: The primary verification form (`VerifyForm.astro`) uses vanilla `fetch` directly, not this hook. The hook exists for potential React-based usage.
+### BatchVerifier (shared lib)
 
-### useBatchVerify
+**File**: `frontend/src/lib/batchVerifier.ts`
 
-**File**: `frontend/src/hooks/useBatchVerify.ts`
-
-- `useMutation` for batch file processing
 - Parses file locally (CSV via SheetJS, XLSX via SheetJS)
-- Iterates through NITs with 2s delay between calls
+- Iterates through NITs with 2s delay between calls (rate-limiting)
+- Each request: `POST /api/v1/verify` with `{ cedula }`, 90s timeout
 - Returns summary: `{ results, total, with_rut, without_rut, errors, duration_ms }`
 - Generates downloadable CSV result file
 

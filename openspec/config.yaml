@@ -3,9 +3,9 @@ schema: spec-driven
 context: |
   ## Stack de Tecnologías (100% TypeScript)
   - Frontend: Astro.js 6.x + TypeScript + Tailwind CSS v4
-  - Frontend Data Fetching: TanStack React Query v5
+  - Frontend Data Fetching: Native fetch API
+  - Frontend Skills: design-taste-frontend (anti-slop, source of truth) + modern-web-guidance (Chrome best practices)
   - Backend: Hono (TypeScript) + Playwright Node.js
-  - Testing: Vitest + @testing-library/react + MSW
   - Deployment: Render.com Free Tier (Docker, 512MB RAM)
   - AI Assistant: MiMo Code (TUI)
 
@@ -17,14 +17,21 @@ context: |
   - Locale: es-CO
 
   ## Restricciones
-  - NO usar waitForTimeout()
-  - Semaphore(1) obligatorio
+  - NO usar waitForTimeout() en código nuevo (excepción: polling JSF existente)
+  - BrowserManager singleton obligatorio (reemplaza Semaphore)
   - Playwright args optimizados para 512MB RAM
 
 rules:
   proposal:
     - Identificar selectores DIAN afectados
     - Considerar escenarios positivos y negativos
+  frontend_design:
+    - Usar codebase-memory-mcp PRIMERO para entender estado actual del frontend
+    - Cargar design-taste-frontend SKILL.md como source of truth
+    - Buscar modern-web-guidance para best practices de Chrome
+    - Anti-slop: no AI purple, no Inter default, no centered hero sin razón
+    - WCAG AA mínimo
+    - Sin librerías externas de componentes (spec lo prohíbe)
   specs:
     - Usar formato Given/When/Then
     - Incluir escenarios de éxito y fallo

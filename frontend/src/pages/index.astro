@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import VerifyForm from '../components/VerifyForm.astro';
 import ResultCard from '../components/ResultCard.astro';
+import BatchUpload from '../components/BatchWizard.astro';
 ---
 
 <Layout title="RUT Verifier - Plataforma DIAN">
@@ -22,6 +23,10 @@ import ResultCard from '../components/ResultCard.astro';
         
         <!-- Renderiza los tags <template> y el contenedor base -->
         <ResultCard />
+
+        <div class="border-t border-gray-200 pt-8">
+          <BatchUpload />
+        </div>
       </div>
 
       <!-- Columna Secundaria: Historial -->
@@ -46,3 +51,4 @@ import ResultCard from '../components/ResultCard.astro';
     </div>
   </div>
 </Layout>
+
