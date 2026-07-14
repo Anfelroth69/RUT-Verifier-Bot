@@ -7,6 +7,9 @@ const BROWSER_ARGS = [
   '--disable-gpu',
   '--disable-software-rasterizer',
   '--no-zygote',
+  '--disable-setuid-sandbox',
+  '--single-process',
+  '--js-flags=--max_old_space_size=256',
 ]
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000

@@ -89,8 +89,8 @@ export class DianVerifier {
     console.log(`[${cedula}] Phase 1: Authentication`)
 
     await this.page.goto('https://muisca.dian.gov.co/WebIdentidadLogin', {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
+      waitUntil: 'load',
+      timeout: 60000,
     })
 
     // Wait for form to be visible
@@ -142,7 +142,7 @@ export class DianVerifier {
     await submitBtn.waitFor({ state: 'visible' })
     await submitBtn.click()
 
-    await this.page.waitForLoadState('domcontentloaded')
+    await this.page.waitForLoadState('domcontentloaded', { timeout: 30000 })
 
     if (this.page.url().includes('IdentidadLogin')) {
       throw new Error('Fallo en login. Verifique sus credenciales o estado del portal.')
