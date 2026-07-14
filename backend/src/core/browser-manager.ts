@@ -9,6 +9,9 @@ const BROWSER_ARGS = [
   '--no-zygote',
   '--disable-setuid-sandbox',
   '--single-process',
+  '--disable-extensions',
+  '--disable-background-networking',
+  '--mute-audio',
   '--js-flags=--max_old_space_size=256',
 ]
 

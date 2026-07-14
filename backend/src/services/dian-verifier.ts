@@ -89,7 +89,7 @@ export class DianVerifier {
     console.log(`[${cedula}] Phase 1: Authentication`)
 
     await this.page.goto('https://muisca.dian.gov.co/WebIdentidadLogin', {
-      waitUntil: 'load',
+      waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
 
