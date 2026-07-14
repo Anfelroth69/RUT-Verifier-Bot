@@ -6,6 +6,7 @@ import { config } from './core/config.js'
 import { browserManager } from './core/browser-manager.js'
 import { verifyRoutes } from './routes/verify.js'
 import { healthRoutes } from './routes/health.js'
+import { debugRoutes } from './routes/debug.js'
 
 const app = new Hono()
 
@@ -20,6 +21,7 @@ app.use('*', cors({
 // Routes
 app.route('/api/v1', verifyRoutes)
 app.route('/api/v1', healthRoutes)
+app.route('/api/v1', debugRoutes)
 
 // Start server
 const port = config.PORT
