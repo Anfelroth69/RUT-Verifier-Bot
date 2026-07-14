@@ -1,0 +1,48 @@
+---
+import '../styles/papel-tokens.css';
+import Sidebar from '../components/papel/Sidebar.astro';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content="Verificador de RUT Colombiano" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@600,700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#faf7f2] text-stone-900 min-h-screen font-sans antialiased">
+    <div class="flex min-h-screen">
+      <Sidebar />
+      <div class="flex-1 min-w-0 flex flex-col">
+        <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-[#faf7f2] border-b border-stone-200 sticky top-0 z-30">
+          <button id="mobile-menu-btn" class="p-1 -ml-1 rounded-lg hover:bg-stone-100 transition-colors" aria-label="Abrir menú">
+            <svg class="w-6 h-6 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+          <span class="font-semibold text-stone-900">RUT Verifier</span>
+        </div>
+        <main class="flex-grow w-full px-4 py-6 sm:px-6 lg:px-8 lg:max-w-3xl lg:mx-auto">
+          <slot />
+        </main>
+        <footer class="bg-[#faf7f2] border-t border-stone-200 mt-auto">
+          <div class="w-full px-4 py-6 sm:px-6 lg:max-w-3xl lg:mx-auto text-center text-sm text-stone-400">
+            &copy; {new Date().getFullYear()} RUT Verifier &middot; Proyecto Open Source
+          </div>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>

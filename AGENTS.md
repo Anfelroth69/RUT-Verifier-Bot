@@ -445,27 +445,112 @@ A change is complete when:
 
 ## OpenSpec Spec-Driven Workflow
 
+### Roles
+
+- **User**: Plans together with the assistant. Confirms with "listo para build".
+- **Assistant (orchestrator)**: Loads codebase context via codebase-memory-mcp, launches subagents via `Task(subagent_type="explore")`, executes implementation (edit/write) inline, chains outputs across agents, delivers a final summary to the user.
+
 ### Build Mode Orchestration
 
-After planning together, the user confirms with "listo para build" or equivalent. The following agent chain executes:
+When the user confirms "listo para build", the assistant executes:
 
 ```
-[Orquestador] → Agent 1 (Propuesta) → Agent 2 (Specs)
-                                     → Agent 3 (Implementación)
-                                     → Agent 4 (Verificación)
-                                     → Resumen final
+[Assistant (orchestrator)]
+   │
+   ├── 0. Load MCP context from the codebase → compiles {{CONTEXT}} block
+   │      (get_architecture, detect_changes, search_graph, trace_path,
+   │       get_code_snippet, query_graph, manage_adr)
+   │
+   ├── 1. Task(explore, prompt=01-proposal-agent.md + {{CONTEXT}})
+   │      → Plan de cambios
+   │
+   ├── 2. [if touches frontend/] Task(explore, prompt=05-frontend-design-agent.md
+   │      + {{CONTEXT}} + Plan) → Design Brief
+   │
+   ├── 3. Task(explore, prompt=02-specs-agent.md + {{CONTEXT}} + Plan)
+   │      → Veredicto ✅/⚠️/❌   [if ❌ → back to step 1 with observations]
+   │
+   ├── 4. Assistant executes edit/write inline (preserves JSON contract)
+   │      following the approved Plan + Agent 3's Edit Instructions
+   │
+   ├── 5. Task(explore, prompt=04-verify-agent.md + {{CONTEXT}} + changes)
+   │      → Resultado de verificación
+   │
+   └── 6. Assistant delivers final summary to the user
+
+   Note: Agent 3 (Implementación) is launched as a subagent that PRODUCES edit
+   instructions, then the orchestrator APPLIES those edits inline. The subagent
+   cannot edit files because explore lacks edit/write tools.
 ```
+
+Agent 5 only runs when the plan touches `frontend/`. For backend-only changes, the chain skips Agent 5: step 1 → step 3 → step 4 → step 5.
 
 Agent definitions and prompts in `openspec/agents/`:
-- `01-proposal-agent.md` — Analiza problema, genera plan con MCP graph
-- `02-specs-agent.md` — Valida plan contra OpenSpecs y reglas
-- `03-implement-agent.md` — Ejecuta cambios de código
-- `04-verify-agent.md` — Corre tests, valida contrato JSON, verifica regresión
+- `01-proposal-agent.md` — Analyzes the problem, generates a change plan from {{CONTEXT}}
+- `02-specs-agent.md` — Validates the plan against OpenSpecs and project rules
+- `03-implement-agent.md` — Produces precise edit instructions for the orchestrator (no direct edits)
+- `04-verify-agent.md` — Runs tests, validates JSON contract, checks regressions
+- `05-frontend-design-agent.md` — Designs frontend with design-taste-frontend + modern-web-guidance skills (only if the plan touches `frontend/`)
 
-### Orquestation rules
+### Orchestration rules
 
-1. Cada agente usa **codebase-memory-mcp** como fuente primaria de contexto
-2. Los agentes se ejecutan secuencialmente, pasando contexto al siguiente
-3. Si Agent 2 rechaza el plan, se vuelve a Agent 1 con las observaciones
-4. Si Agent 4 encuentra fallos, los reporta para corrección manual
-5. Siempre pedir confirmación al usuario antes de comenzar la cadena mostrando un resumen del plan
+1. The assistant runs the MCP queries **before** launching any subagent
+2. Subagents receive a pre-loaded `{{CONTEXT}}` block — they do NOT run MCP themselves (explore subagents only have bash/glob/grep/read/webfetch)
+3. Subagents are launched via `Task` tool with `subagent_type="explore"`
+4. Implementation (edit/write) is executed by the assistant inline, based on Agent 3's Edit Instructions
+5. If Agent 2 rejects the plan, go back to Agent 1 with the observations
+6. If Agent 4 finds failures, report them for manual correction
+7. Agent 5 (Frontend Design) is invoked only when the plan affects files in `frontend/`
+8. Always ask the user for confirmation before starting the chain, showing a plan summary
+
+### MCP queries pre-orchestration (executed by the assistant)
+
+**Always:**
+- `get_architecture(project, aspects=['all'])` — structure, clusters, hotspots
+- `detect_changes(project)` — recent changes and their impact
+- `manage_adr(project, mode='get')` — active Architecture Decision Records
+
+**Feature-dependent:**
+- `search_graph(query=..., project=...)` — relevant components
+- `trace_path(function_name=..., direction='both', project=...)` — dependencies
+- `get_code_snippet(qualified_name=..., project=...)` — key implementations
+- `query_graph(project, query=...)` — ad-hoc structural queries
+
+### `{{CONTEXT}}` block format
+
+The assistant compiles a markdown block with:
+
+```markdown
+## Contexto del codebase (vía MCP)
+
+### Arquitectura
+- Stack: [detected]
+- Componentes principales: [list with paths and role]
+- Clusters funcionales: [groups]
+- Hotspots: [points with highest fan-in/fan-out]
+- Capas y boundaries: [api/entry/internal/leaf]
+
+### Cambios recientes (detect_changes)
+[diff summary from the last relevant commit]
+
+### Componentes relevantes al feature
+[get_code_snippet output of key files, trace_path of dependencies]
+
+### ADRs activos
+[manage_adr output]
+
+### Specs relevantes
+[summarized content of openspec/specs/*/spec.md for the affected area]
+```
+
+The `{{CONTEXT}}` should be **as complete as possible** — subagents cannot query the graph themselves. Include all relevant code snippets, dependencies, and rules the subagent will need to emit its verdict/brief/plan.
+
+### Round-trip protocol
+
+If a subagent's output contains a section `## Necesito profundizar` with a list of missing context, the assistant:
+
+1. Runs the necessary MCP queries (search_graph, trace_path, get_code_snippet)
+2. Appends the results to the original `{{CONTEXT}}` block
+3. Relaunches the same subagent with the expanded `{{CONTEXT}}` + previous inputs
+
+A round-trip costs one new Task invocation plus the orchestrator's MCP queries. Minimize round-trips by making the initial `{{CONTEXT}}` as complete as possible.

@@ -1,0 +1,28 @@
+---
+import PapelLayout from '../layouts/PapelLayout.astro';
+import VerifyForm from '../components/papel/VerifyForm.astro';
+import ResultCard from '../components/papel/ResultCard.astro';
+import BatchWizard from '../components/papel/BatchWizard.astro';
+---
+
+<PapelLayout title="RUT Verifier">
+  <div class="space-y-8">
+    <section class="max-w-2xl mx-auto mb-10">
+      <h2 class="text-3xl font-semibold text-stone-900 tracking-tight">
+        Verificación de RUT Colombiano
+      </h2>
+      <p class="mt-4 text-base text-stone-500 leading-relaxed max-w-[65ch]">
+        Consulta el estado de inscripción en el Registro Único Tributario (RUT) de la DIAN ingresando el número de cédula.
+      </p>
+    </section>
+
+    <div data-view="individual" class="space-y-8">
+      <VerifyForm />
+      <ResultCard />
+    </div>
+
+    <div data-view="batch" class="hidden">
+      <BatchWizard />
+    </div>
+  </div>
+</PapelLayout>

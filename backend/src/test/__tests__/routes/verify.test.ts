@@ -12,7 +12,7 @@ vi.mock('../../../core/config.js', () => ({
   },
 }))
 
-// Mock DianVerifier (must be a class since route uses `new DianVerifier(config)`)
+// Mock DianVerifier (must be a class since route uses `new DianVerifier(page, config)`)
 vi.mock('../../../services/dian-verifier.js', () => ({
   DianVerifier: class {
     verify = vi.fn().mockResolvedValue({

@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { serve } from '@hono/node-server'
 import { config } from './core/config.js'
+import { browserManager } from './core/browser-manager.js'
 import { verifyRoutes } from './routes/verify.js'
 import { healthRoutes } from './routes/health.js'
 
@@ -31,8 +32,9 @@ const server = serve({
 })
 
 // Graceful shutdown
-const shutdown = () => {
+const shutdown = async () => {
   console.log('\nShutting down gracefully...')
+  await browserManager.close()
   server.close(() => {
     console.log('Server closed.')
     process.exit(0)

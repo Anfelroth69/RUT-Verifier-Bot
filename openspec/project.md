@@ -24,14 +24,14 @@ Plataforma full-stack para la verificación automática de RUT (Registro Único 
 │  Tailwind v4 │                    │  TypeScript  │                    │              │
 └──────────────┘                    └──────────────┘                    └──────────────┘
      Static                           Docker (512MB)                      Angular Material
-     render.com                       Semaphore(1)                       JSF
+     render.com                       BrowserManager                     JSF
 ```
 
 ## Constraints
 
 - **512MB RAM**: Playwright must launch with `--no-sandbox --disable-dev-shm-usage --disable-gpu --single-process`
-- **Concurrency**: `Semaphore(1)` enforces single-query execution at a time
-- **No waitForTimeout()**: All waits must be state-based via Playwright locators
+- **Concurrency**: `BrowserManager` singleton manages persistent Chromium with page-per-request isolation
+- **No waitForTimeout()**: All waits must be state-based via Playwright locators (exception: JSF polling with adaptive delays)
 - **Locale**: `es-CO` with `Accept-Language: es-CO,es;q=0.9`
 - **No Database**: History stored in browser LocalStorage (max 10 entries)
 

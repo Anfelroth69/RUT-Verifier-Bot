@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { DianVerifier } from '../services/dian-verifier.js'
-import { semaphore } from '../core/semaphore.js'
+import { browserManager } from '../core/browser-manager.js'
 import { config } from '../core/config.js'
 import { RutRequestSchema } from '../schemas/rut.js'
 
@@ -20,11 +20,10 @@ app.post('/verify', async (c) => {
 
     const { cedula } = parsed.data
 
-    // Acquire semaphore (limit to 1 concurrent Playwright instance)
-    const release = await semaphore.acquire()
+    const { page, release } = await browserManager.acquire()
 
     try {
-      const verifier = new DianVerifier(config)
+      const verifier = new DianVerifier(page, config)
       const result = await verifier.verify(cedula)
 
       if (result.status === 'failed') {

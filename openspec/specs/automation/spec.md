@@ -2,7 +2,7 @@
 
 ## Overview
 
-Playwright automation that logs into DIAN MUISCA portal and verifies RUT status for a given cédula. Runs inside the Hono/TypeScript backend with `Semaphore(1)` enforcement. Target URLs:
+Playwright automation that logs into DIAN MUISCA portal and verifies RUT status for a given cédula. Runs inside the Hono/TypeScript backend with `BrowserManager` singleton. Target URLs:
 
 - Login: `https://muisca.dian.gov.co/WebIdentidadLogin`
 - Search: `https://muisca.dian.gov.co/WebArquitectura/DefConsultaPersonas.faces`
@@ -153,7 +153,7 @@ Then Escape is pressed
 
 ```
 Given the DIAN portal is slow or unreachable
-When any navigation exceeds the timeout (45s login, 15s search)
+When any navigation exceeds the timeout (30s login, 10s search)
 Then the automation catches the Playwright timeout
   And returns status "failed" with appropriate message
   And the browser is closed in finally
@@ -186,21 +186,23 @@ const browser = await chromium.launch({
 })
 ```
 
-### Semaphore(1) — Custom Implementation
+### BrowserManager — Singleton + Concurrency Control
+
+The `BrowserManager` singleton (`backend/src/core/browser-manager.ts`) replaces `Semaphore(1)`:
+- Maintains one persistent Chromium instance across requests
+- Each request acquires a fresh `{ page, context }` via `acquire()`, releases them via `release()` (without closing the browser)
+- Browser is closed only on server shutdown or after an idle timeout
+- Crash detection: if browser disconnects, a new instance is launched on next `acquire()`
 
 ```typescript
-class Semaphore {
-  private permits: number
-  private queue: (() => void)[] = []
-
-  async acquire(): Promise<() => void>
-  private release(): void
+const { page, release } = await browserManager.acquire()
+try {
+  const verifier = new DianVerifier(page, config)
+  const result = await verifier.verify(cedula)
+} finally {
+  release()
 }
-
-export const semaphore = new Semaphore(1)
 ```
-
-Only one Playwright instance at any time. Semaphore is acquired before `verify()` and released in `finally` block.
 
 ---
 
@@ -212,14 +214,14 @@ Only one Playwright instance at any time. Semaphore is acquired before `verify()
 // Wait for element visibility
 await page.locator('selector').waitFor({ state: 'visible', timeout: 30000 })
 
-// Wait for navigation to complete
-await page.waitForNavigation({ timeout: 10000 })
+// Check URL after load to detect login failure
+if (page.url().includes('IdentidadLogin')) { throw new Error('...') }
 
 // Wait for load state
 await page.waitForLoadState('domcontentloaded')
 ```
 
-**Known exception**: The JSF result polling loop uses `waitForTimeout(500)` between attempts. This is a pragmatic concession because JSF pages update dynamically without full page navigations, making it impossible to wait for a specific selector that may or may not appear. The polling approach checks actual page state each iteration.
+**Known exception**: The JSF result polling loop uses adaptive `waitForTimeout` with progressive delays (`[200, 200, 200, 300, 300, 500]`ms). This is a pragmatic concession because JSF pages update dynamically without full page navigations, making it impossible to wait for a specific selector that may or may not appear. The polling approach checks actual page state each iteration.
 
 ---
 
@@ -244,14 +246,14 @@ const context = await browser.newContext({
 
 | Error | Recovery |
 |-------|----------|
-| Login timeout (45s) | Caught by Playwright timeout, fail with `status: "failed"` |
+| Login timeout (30s) | Caught by Playwright timeout, fail with `status: "failed"` |
 | Login modal blocking | Dismiss via click or Escape, continue |
 | Login failure (stays on login page) | Detect URL still contains "IdentidadLogin", throw descriptive error |
 | Element not found (search page) | Playwright timeout, fail with descriptive error |
 | Navigation timeout (search page) | Playwright timeout, fail with `status: "failed"` |
 | Browser crash | Error caught in try/catch, browser.close in finally ensures cleanup |
 | Unrecognized result | Polling loop exhausts, throw descriptive timeout error |
-| All errors | Semaphore released via finally in route handler |
+| All errors | Page/context released via finally in route handler |
 
 ---
 
@@ -272,13 +274,13 @@ interface RutResult {
 ## Testing
 
 Unit tests should verify:
-- Semaphore acquisition and release behavior
+- BrowserManager acquire/release behavior
 - Result parsing logic (mocked page responses)
 - Error propagation from automation to route handler
 - Zod validation of request/response schemas
 
 Integration tests should verify:
 - Full flow with mocked DIAN portal responses (if feasible)
-- Semaphore concurrency behavior (sequential execution)
+- BrowserManager concurrency behavior (sequential execution)
 
 **Note**: E2E tests against the live DIAN portal are not feasible in CI. Manual verification against known positive and negative cédulas is required after any selector change.

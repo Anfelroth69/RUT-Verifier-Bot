@@ -1,5 +1,4 @@
-import { chromium, Browser, Page } from 'playwright'
-import { z } from 'zod'
+import { Page } from 'playwright'
 
 interface RutResult {
   status: 'success' | 'failed'
@@ -15,7 +14,6 @@ interface VerifierConfig {
   PLAYWRIGHT_HEADLESS: boolean
 }
 
-// Selectors for DIAN MUISCA portal
 const SELECTORS = {
   auth: {
     modal_notifications: 'text=Notificaciones',
@@ -41,11 +39,7 @@ const SELECTORS = {
 }
 
 export class DianVerifier {
-  private config: VerifierConfig
-
-  constructor(config: VerifierConfig) {
-    this.config = config
-  }
+  constructor(private page: Page, private config: VerifierConfig) {}
 
   async verify(cedula: string): Promise<RutResult> {
     const startTime = Date.now()
@@ -57,43 +51,19 @@ export class DianVerifier {
       duration_ms: 0,
     }
 
-    let browser: Browser | null = null
-
     try {
-      // Launch browser with memory optimization flags for Render Free Tier
-      browser = await chromium.launch({
-        headless: this.config.PLAYWRIGHT_HEADLESS,
-        args: [
-          '--no-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--single-process',
-        ],
-      })
-
-      const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        permissions: [],
-        locale: 'es-CO',
-        extraHTTPHeaders: {
-          'Accept-Language': 'es-CO,es;q=0.9',
-        },
-      })
-
-      const page = await context.newPage()
-
       // Phase 1: Authentication
-      await this.authenticate(page, cedula)
+      await this.authenticate(cedula)
 
       // Phase 2: Navigation
-      await this.navigateToSearch(page)
+      await this.navigateToSearch()
 
       // Phase 3: Search
-      await this.performSearch(page, cedula)
+      await this.performSearch(cedula)
 
       // Phase 4: Parse result
       result.status = 'success'
-      const searchResult = await this.parseResult(page, cedula)
+      const searchResult = await this.parseResult(cedula)
 
       if (searchResult.rutExists) {
         result.rut_exists = true
@@ -109,50 +79,46 @@ export class DianVerifier {
     } catch (error: any) {
       result.message = error.message || 'Error en el proceso'
       console.error(`[${cedula}] Error:`, error)
-    } finally {
-      if (browser) {
-        await browser.close()
-      }
     }
 
     result.duration_ms = Date.now() - startTime
     return result
   }
 
-  private async authenticate(page: Page, cedula: string): Promise<void> {
+  private async authenticate(cedula: string): Promise<void> {
     console.log(`[${cedula}] Phase 1: Authentication`)
 
-    await page.goto('https://muisca.dian.gov.co/WebIdentidadLogin', {
+    await this.page.goto('https://muisca.dian.gov.co/WebIdentidadLogin', {
       waitUntil: 'domcontentloaded',
-      timeout: 45000,
+      timeout: 30000,
     })
 
     // Wait for form to be visible
-    await page.locator(SELECTORS.auth.doc_type_trigger).waitFor({
+    await this.page.locator(SELECTORS.auth.doc_type_trigger).waitFor({
       state: 'visible',
-      timeout: 20000,
+      timeout: 15000,
     })
 
     // Clean notifications modal if present
-    const notificationsModal = page.locator(SELECTORS.auth.modal_notifications)
+    const notificationsModal = this.page.locator(SELECTORS.auth.modal_notifications)
     if (await notificationsModal.isVisible()) {
       console.log(`[${cedula}] Cleaning notifications modal`)
-      const continueBtn = page.locator(SELECTORS.auth.modal_notifications_btn).first()
+      const continueBtn = this.page.locator(SELECTORS.auth.modal_notifications_btn).first()
       if (await continueBtn.isVisible()) {
         await continueBtn.click()
       } else {
-        await page.keyboard.press('Escape')
+        await this.page.keyboard.press('Escape')
       }
       await notificationsModal.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {})
     }
 
     // Clean error login modal if present
-    const errorModal = page.locator(SELECTORS.auth.modal_error_login)
+    const errorModal = this.page.locator(SELECTORS.auth.modal_error_login)
     if (await errorModal.isVisible()) {
       console.log(`[${cedula}] Cleaning error login modal`)
-      await page.keyboard.press('Escape')
+      await this.page.keyboard.press('Escape')
       if (await errorModal.isVisible()) {
-        const closeBtn = page.locator(SELECTORS.auth.modal_error_login_close).first()
+        const closeBtn = this.page.locator(SELECTORS.auth.modal_error_login_close).first()
         if (await closeBtn.isVisible()) {
           await closeBtn.click({ force: true })
         }
@@ -161,61 +127,56 @@ export class DianVerifier {
     }
 
     // Fill login form
-    await page.locator(SELECTORS.auth.doc_type_trigger).click()
-    await page.waitForSelector('.mat-select-panel', { state: 'visible', timeout: 5000 })
+    await this.page.locator(SELECTORS.auth.doc_type_trigger).click()
+    await this.page.waitForSelector('.mat-select-panel', { state: 'visible', timeout: 5000 })
 
-    const cedulaOption = page.locator(`${SELECTORS.auth.doc_type_options}:has-text('Cédula de ciudadanía')`).first()
+    const cedulaOption = this.page.locator(`${SELECTORS.auth.doc_type_options}:has-text('Cédula de ciudadanía')`).first()
     await cedulaOption.waitFor({ state: 'visible', timeout: 5000 })
     await cedulaOption.click({ force: true })
 
-    await page.locator(SELECTORS.auth.input_username).fill(this.config.DIAN_DOCUMENT)
-    await page.locator(SELECTORS.auth.input_password).fill(this.config.DIAN_PASSWORD)
-    await page.locator(SELECTORS.auth.checkbox_terms).click()
+    await this.page.locator(SELECTORS.auth.input_username).fill(this.config.DIAN_DOCUMENT)
+    await this.page.locator(SELECTORS.auth.input_password).fill(this.config.DIAN_PASSWORD)
+    await this.page.locator(SELECTORS.auth.checkbox_terms).click()
 
-    const submitBtn = page.locator(SELECTORS.auth.btn_submit)
+    const submitBtn = this.page.locator(SELECTORS.auth.btn_submit)
     await submitBtn.waitFor({ state: 'visible' })
     await submitBtn.click()
 
-    await page.waitForLoadState('domcontentloaded')
+    await this.page.waitForLoadState('domcontentloaded')
 
-    // Check for login failure
-    try {
-      await page.waitForNavigation({ timeout: 10000 })
-    } catch {
-      if (page.url().includes('IdentidadLogin')) {
-        throw new Error('Fallo en login. Verifique sus credenciales o estado del portal.')
-      }
+    if (this.page.url().includes('IdentidadLogin')) {
+      throw new Error('Fallo en login. Verifique sus credenciales o estado del portal.')
     }
   }
 
-  private async navigateToSearch(page: Page): Promise<void> {
+  private async navigateToSearch(): Promise<void> {
     console.log('Phase 2: Navigation to search')
-    await page.goto('https://muisca.dian.gov.co/WebArquitectura/DefConsultaPersonas.faces', {
+    await this.page.goto('https://muisca.dian.gov.co/WebArquitectura/DefConsultaPersonas.faces', {
       waitUntil: 'domcontentloaded',
     })
   }
 
-  private async performSearch(page: Page, cedula: string): Promise<void> {
+  private async performSearch(cedula: string): Promise<void> {
     console.log(`[${cedula}] Phase 3: Search`)
 
-    const searchInput = page.locator(SELECTORS.search.input_target_cedula)
-    await searchInput.waitFor({ state: 'visible', timeout: 15000 })
+    const searchInput = this.page.locator(SELECTORS.search.input_target_cedula)
+    await searchInput.waitFor({ state: 'visible', timeout: 10000 })
     await searchInput.fill(cedula)
 
-    const searchBtn = page.locator(SELECTORS.search.btn_search_jsf)
+    const searchBtn = this.page.locator(SELECTORS.search.btn_search_jsf)
     await searchBtn.click()
   }
 
-  private async parseResult(page: Page, cedula: string): Promise<{ rutExists: boolean; rutNumber: string }> {
+  private async parseResult(cedula: string): Promise<{ rutExists: boolean; rutNumber: string }> {
     console.log(`[${cedula}] Phase 4: Parse result`)
 
     const maxAttempts = 30
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // Check for success (RUT found)
-      const docLabel = page.locator('span.textoNegro').filter({ hasText: /^Documento:\s*$/ })
+      const docLabel = this.page.locator('span.textoNegro').filter({ hasText: /^Documento:\s*$/ })
       if (await docLabel.isVisible()) {
-        const blackSpans = page.locator(SELECTORS.results.span_success)
+        const blackSpans = this.page.locator(SELECTORS.results.span_success)
         const count = await blackSpans.count()
 
         for (let i = 0; i < count; i++) {
@@ -229,14 +190,15 @@ export class DianVerifier {
 
       // Check for error (no registration)
       const errorPattern = /no tiene registro de inscripci[oó]n/i
-      const errorSelector = page.locator(SELECTORS.results.body).filter({ hasText: errorPattern })
+      const errorSelector = this.page.locator(SELECTORS.results.body).filter({ hasText: errorPattern })
       if (await errorSelector.isVisible()) {
         console.log(`[${cedula}] ❌ No RUT found`)
         return { rutExists: false, rutNumber: '' }
       }
 
-      // Wait before next attempt (state-based, not static timeout)
-      await page.waitForTimeout(500)
+      // Adaptive polling: faster checks early, slower later
+      const delays = [200, 200, 200, 300, 300, 500]
+      await this.page.waitForTimeout(delays[Math.min(attempt, delays.length - 1)])
     }
 
     throw new Error('Timeout de red: El servidor de la DIAN no arrojó ninguna estructura reconocible.')

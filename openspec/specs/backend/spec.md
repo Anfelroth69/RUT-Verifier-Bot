@@ -88,8 +88,7 @@
 ```
 Given a valid cédula "16728423" that has an active RUT
 When the client sends POST /api/v1/verify with cedula "16728423"
-Then the backend acquires Semaphore(1)
-  And launches Playwright with optimized args
+Then the backend acquires a page from BrowserManager
   And navigates to DIAN MUISCA login
   And authenticates with DIAN_DOCUMENT and DIAN_PASSWORD
   And navigates to the search page
@@ -131,10 +130,10 @@ Then the backend catches the navigation error
 
 ```
 Given two requests arrive simultaneously
-When the first request acquires Semaphore(1)
-Then the second request waits in queue
+When the first request acquires a page from BrowserManager
+Then the second request waits for an available page
   And both requests eventually complete with valid responses
-  And only one Playwright instance runs at a time
+  And pages are released after each request
 ```
 
 ### Scenario: Browser crash or OOM
@@ -183,15 +182,12 @@ Selectors for the DIAN MUISCA portal are **hardcoded** in `backend/src/services/
 
 ## Concurrency
 
-A custom `Semaphore` class (`backend/src/core/semaphore.ts`) limits Playwright to **1 concurrent instance**:
+The `BrowserManager` singleton (`backend/src/core/browser-manager.ts`) manages a persistent Chromium instance:
 
-```typescript
-class Semaphore {
-  private permits: number
-  private queue: (() => void)[] = []
-  // acquire/release implementation
-}
-export const semaphore = new Semaphore(1)
-```
+- Maintains one browser across requests
+- Each request acquires a fresh `{ page, context }` via `acquire()`
+- Pages and contexts are released after each request
+- Browser is closed only on server shutdown or after 5 min idle timeout
+- Crash detection: if browser disconnects, a new instance is launched on next `acquire()`
 
 No external library. No database. No cache layer.

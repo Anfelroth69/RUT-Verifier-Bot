@@ -1,54 +1,14 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import VerifyForm from '../components/VerifyForm.astro';
-import ResultCard from '../components/ResultCard.astro';
-import BatchUpload from '../components/BatchWizard.astro';
+const dest = '/propuesta-papel';
 ---
-
-<Layout title="RUT Verifier - Plataforma DIAN">
-  <div class="space-y-8">
-    <section class="text-center max-w-2xl mx-auto mb-10">
-      <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-        Verificación de RUT Colombiano
-      </h2>
-      <p class="mt-4 text-lg text-gray-500">
-        Consulta el estado de inscripción en el Registro Único Tributario (RUT) de la DIAN ingresando el número de cédula.
-      </p>
-    </section>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Columna Principal -->
-      <div class="lg:col-span-2 space-y-8">
-        <VerifyForm />
-        
-        <!-- Renderiza los tags <template> y el contenedor base -->
-        <ResultCard />
-
-        <div class="border-t border-gray-200 pt-8">
-          <BatchUpload />
-        </div>
-      </div>
-
-      <!-- Columna Secundaria: Historial -->
-      <div class="lg:col-span-1">
-        <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden sticky top-24">
-          <div class="p-4 border-b border-gray-100 bg-gray-50">
-            <h3 class="font-semibold text-gray-900 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              Consultas Recientes
-            </h3>
-          </div>
-          <div class="p-4 max-h-[60vh] overflow-y-auto">
-            <p id="empty-history" class="text-sm text-gray-500 text-center py-4 hidden">
-              Aún no hay consultas en el historial.
-            </p>
-            <ul id="history-list" class="divide-y divide-gray-100">
-              <!-- JS llenará esta lista usando el history-item-template -->
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</Layout>
-
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content="0;url={dest}" />
+  <title>RUT Verifier</title>
+</head>
+<body>
+  <p>Redirigiendo a <a href={dest}>RUT Verifier</a>...</p>
+</body>
+</html>

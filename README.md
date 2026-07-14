@@ -4,7 +4,7 @@ Plataforma full-stack para la verificación automática de RUT en la DIAN.
 
 ---
 
-## ⚠️ Exención de Responsabilidad
+## Exención de Responsabilidad
 
 Este proyecto es una herramienta de automatización desarrollada con fines educativos, de investigación, aprendizaje y optimización de flujos de trabajo.
 
@@ -18,9 +18,19 @@ Los autores y colaboradores no asumen responsabilidad por daños, pérdidas, blo
 
 ## Arquitectura
 
-*   **Backend**: FastAPI + Playwright (Dockerizado). Implementa un semáforo de concurrencia `asyncio.Semaphore(1)` para optimizar el consumo de memoria en entornos con recursos limitados.
+*   **Backend**: Hono (TypeScript) + Playwright. BrowserManager singleton mantiene una instancia persistente de Chromium con control de concurrencia y timeout de inactividad (5 min).
 *   **Frontend**: Astro.js + Tailwind CSS v4. Interfaz interactiva y responsiva con almacenamiento de historial de búsquedas local en `LocalStorage`.
-*   **Despliegue**: Orquestación unificada para Render.com Free Tier mediante `render.yaml`.
+*   **Testing**: Vitest para unit tests del backend.
+*   **Despliegue**: Docker en Render.com Free Tier (512MB RAM) mediante `render.yaml`.
+
+### BrowserManager
+
+El `BrowserManager` (`backend/src/core/browser-manager.ts`) reemplaza el semaphore anterior:
+
+- Mantiene un browser Chromium persistente entre requests
+- Cada request adquiere un `{ page, context }` fresco via `acquire()`
+- El browser solo se cierra en shutdown del servidor o tras 5 min de inactividad
+- Detección de crashes: si el browser se desconecta, se relanza en el próximo `acquire()`
 
 ---
 
@@ -42,28 +52,24 @@ Este repositorio incluye `render.yaml`. Al conectar este repositorio a su cuenta
    ```bash
    cd backend
    ```
-2. Crear un entorno virtual:
+2. Instalar dependencias:
    ```bash
-   python -m venv venv
+   pnpm install
    ```
-3. Activar el entorno virtual:
-   *   **Linux/macOS**: `source venv/bin/activate`
-   *   **Windows**: `venv\Scripts\activate`
-4. Instalar las dependencias y los binarios de Playwright:
+3. Instalar binarios de Playwright:
    ```bash
-   pip install -r requirements.txt
-   playwright install chromium
+   pnpm exec playwright install chromium
    ```
-5. Crear un archivo `.env` en la raíz del directorio `/backend`:
+4. Crear un archivo `.env` en la raíz del directorio `/backend`:
    ```env
    DIAN_DOCUMENT=TuDocumento
    DIAN_PASSWORD=TuContraseña
    PLAYWRIGHT_HEADLESS=True
    FRONTEND_URL=http://localhost:4321
    ```
-6. Iniciar el servidor de desarrollo:
+5. Iniciar el servidor de desarrollo:
    ```bash
-   uvicorn app.main:app --reload
+   pnpm run dev
    ```
 
 ### Frontend
@@ -80,6 +86,13 @@ Este repositorio incluye `render.yaml`. Al conectar este repositorio a su cuenta
    ```bash
    pnpm run dev
    ```
+
+### Tests
+
+```bash
+cd backend
+pnpm run test
+```
 
 ---
 
